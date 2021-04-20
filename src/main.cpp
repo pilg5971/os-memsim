@@ -11,6 +11,11 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *valu
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table);
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table);
 
+//Command Conversion Methods
+void splitString(std::string text, char d, std::vector<std::string>& result);
+void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
+void freeArrayOfCharArrays(char **array, size_t array_length);
+
 int main(int argc, char **argv)
 {
     // Ensure user specified page size as a command line parameter
@@ -34,11 +39,59 @@ int main(int argc, char **argv)
 
     // Prompt loop
     std::string command;
+    std::vector<std::string> command_list;
+    std::string lead_command;
     std::cout << "> ";
     std::getline (std::cin, command);
     while (command != "exit") {
         // Handle command
         // TODO: implement this!
+
+        //command = current command
+        //command_list = Command + Arguments in Array format.... I.E. command_list[0] = create [1] = 1024 ... etc
+        splitString(command, ' ', command_list);
+        lead_command = command_list[0];
+        /*
+        std::cout << "command_list[0]: " << command_list[0] << std::endl;
+        std::cout << "command_list[1]: " << command_list[1] << std::endl;
+        std::cout << "command_list[2]: " << command_list[2] << std::endl;
+        std::cout << "lead_command: " << lead_command << std::endl;
+        */
+
+        //Valid Command Check
+        if(lead_command == "create"){
+            //std::cout << "Success! --> create" << std::endl;
+
+            //create process
+            int textSize = stoi(command_list[1]);
+            int dataSize = stoi(command_list[2]); 
+            createProcess(textSize, dataSize, mmu, page_table);
+        }
+        else if(lead_command == "allocate"){
+            //std::cout << "Success! --> allocate" << std::endl;
+
+        }
+        else if(lead_command == "set"){
+            //std::cout << "Success! --> set" << std::endl;
+
+        }   
+        else if(lead_command == "free"){
+            //std::cout << "Success! --> free" << std::endl;
+
+        }
+        else if(lead_command == "terminate"){
+            //std::cout << "Success! --> terminate" << std::endl;
+
+        }
+        else if(lead_command == "print"){
+            //std::cout << "Success! --> print" << std::endl;
+
+        }
+
+        //Invalid Command
+        else{
+            std::cout << "error: command not recognized" << std::endl;
+        }
 
         // Get next command
         std::cout << "> ";
@@ -108,4 +161,102 @@ void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table)
     // TODO: implement this!
     //   - remove process from MMU
     //   - free all pages associated with given process
+}
+
+//--------------------------------------------------STRING METHODS--------------------------------------------------//
+//                                               (From Assignment #2)
+
+/*
+   text: string to split
+   d: character delimiter to split `text` on
+   result: vector of strings - result will be stored here
+*/
+void splitString(std::string text, char d, std::vector<std::string>& result)
+{
+    enum states { NONE, IN_WORD, IN_STRING } state = NONE;
+
+    int i;
+    std::string token;
+    result.clear();
+    for (i = 0; i < text.length(); i++)
+    {
+        char c = text[i];
+        switch (state) {
+            case NONE:
+                if (c != d)
+                {
+                    if (c == '\"')
+                    {
+                        state = IN_STRING;
+                        token = "";
+                    }
+                    else
+                    {
+                        state = IN_WORD;
+                        token = c;
+                    }
+                }
+                break;
+            case IN_WORD:
+                if (c == d)
+                {
+                    result.push_back(token);
+                    state = NONE;
+                }
+                else
+                {
+                    token += c;
+                }
+                break;
+            case IN_STRING:
+                if (c == '\"')
+                {
+                    result.push_back(token);
+                    state = NONE;
+                }
+                else
+                {
+                    token += c;
+                }
+                break;
+        }
+    }
+    if (state != NONE)
+    {
+        result.push_back(token);
+    }
+}
+
+/*
+   list: vector of strings to convert to an array of character arrays
+   result: pointer to an array of character arrays when the vector of strings is copied to
+*/
+void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result)
+{
+    int i;
+    int result_length = list.size() + 1;
+    *result = new char*[result_length];
+    for (i = 0; i < list.size(); i++)
+    {
+        (*result)[i] = new char[list[i].length() + 1];
+        strcpy((*result)[i], list[i].c_str());
+    }
+    (*result)[list.size()] = NULL;
+}
+
+/*
+   array: list of strings (array of character arrays) to be freed
+   array_length: number of strings in the list to free
+*/
+void freeArrayOfCharArrays(char **array, size_t array_length)
+{
+    int i;
+    for (i = 0; i < array_length; i++)
+    {
+        if (array[i] != NULL)
+        {
+            delete[] array[i];
+        }
+    }
+    delete[] array;
 }
