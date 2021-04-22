@@ -15,6 +15,7 @@ void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table);
 void splitString(std::string text, char d, std::vector<std::string>& result);
 void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
 void freeArrayOfCharArrays(char **array, size_t array_length);
+DataType stringToDataType(std::string text);
 
 int main(int argc, char **argv)
 {
@@ -69,7 +70,11 @@ int main(int argc, char **argv)
         }
         else if(lead_command == "allocate"){
             //std::cout << "Success! --> allocate" << std::endl;
-
+            int pid = stoi(command_list[1]);
+            std::string varName = command_list[2];
+            DataType dataType = stringToDataType(command_list[3]);
+            int numEl = stoi(command_list[4]);
+            allocateVariable(pid, varName, dataType, numEl, mmu, page_table);
         }
         else if(lead_command == "set"){
             //std::cout << "Success! --> set" << std::endl;
@@ -85,7 +90,29 @@ int main(int argc, char **argv)
         }
         else if(lead_command == "print"){
             //std::cout << "Success! --> print" << std::endl;
+            page_table->print();
+            std::string whatToPrint = command_list[1];
+            if(whatToPrint == "mmu"){
+                mmu->print();
+            }
+            else if(whatToPrint == "page"){
+                page_table->print();
+            }
+            /*
+            else if(whatToPrint == "processes"){
+                std::vector<std::string> pids = page_table->sortedKeys();
+                int k;
+                for(k = 0; k < pids.size(); k++){
+                    std::cout << pids.at(k).substr(0, "|") << std::endl;
+                }
+            }
+            */
+            //Variable printing
+            /*TBD
+            else{
 
+            }
+            */
         }
 
         //Invalid Command
@@ -134,7 +161,10 @@ void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table
     uint32_t PID = mmu->createProcess();
 
     //[2]: allocate new variables for <TEXT>, <GLOBALS>, and <STACK>
-
+    //<STACK> = 65536
+    allocateVariable(PID, "<TEXT>", Char, text_size, mmu, page_table);
+    allocateVariable(PID, "<GLOBALS>", Char, data_size, mmu, page_table);
+    allocateVariable(PID, "<STACK>", Char, 65536, mmu, page_table);
 
     //[3]: print PID
     std::cout << PID << std::endl;
@@ -149,6 +179,22 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
     //   - print virtual memory address
 
     //[1]: find first free space within a page already allocated to this process that is large enough to fit the new variable
+    int n;
+    if(type == Char){
+        n = num_elements;
+    }
+    else if(type == Short){
+        n = num_elements * 2;
+    }
+    else if(type == Int || type == Float){
+        n = num_elements * 4;
+    }
+    else if(type == Long || type == Double){
+        n = num_elements * 8;
+    }
+
+    page_table->addEntry(pid, 0);
+    page_table->addEntry(pid, 1);
 
     //[2]: if no hole is large enough, allocate new page(s)
 
@@ -276,4 +322,30 @@ void freeArrayOfCharArrays(char **array, size_t array_length)
         }
     }
     delete[] array;
+}
+
+DataType stringToDataType(std::string text){
+    DataType solution;
+    if(text == "Int" || text == "int"){
+        solution = Int;
+    }
+    else if(text == "Char" || text == "char"){
+        solution = Char;
+    }
+    else if(text == "Short" || text == "short"){
+        solution = Short;
+    }
+    else if(text == "Float" || text == "float"){
+        solution = Float;
+    }
+    else if(text == "Long" || text == "long"){
+        solution = Long;
+    }
+    else if(text == "Double" || text == "double"){
+        solution = Double;
+    }
+    else{
+        std::cout << "error: allocate command parameter not recognized" << std::endl;
+    }
+    return solution;
 }

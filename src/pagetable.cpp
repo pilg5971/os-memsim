@@ -31,6 +31,7 @@ void PageTable::addEntry(uint32_t pid, int page_number)
 
     int frame = 0; 
     // Find free frame
+    frame = (sortedKeys().size() + 1);
     // TODO: implement this!
     _table[entry] = frame;
 }
@@ -67,5 +68,6 @@ void PageTable::print()
     for (i = 0; i < keys.size(); i++)
     {
         // TODO: print all pages
+        std::cout << keys.at(i) << "|" << _table[keys.at(i)] <<std::endl;
     }
 }
