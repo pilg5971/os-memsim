@@ -32,6 +32,11 @@ public:
     uint32_t createProcess();
     void addVariableToProcess(uint32_t pid, std::string var_name, DataType type, uint32_t size, uint32_t address);
     void print();
+
+    uint32_t getFreeSpace(uint32_t pid, uint32_t size, uint32_t allocatedSpace);
+    void modifyFreeSpace(u_int32_t pid, uint32_t size, uint32_t address);
+    void newFreeSpaceGap(u_int32_t pid, uint32_t size, uint32_t address);
+    void newFreeSpacePage(u_int32_t pid, uint32_t page_size, uint32_t page_address);
 };
 
 #endif // __MMU_H_

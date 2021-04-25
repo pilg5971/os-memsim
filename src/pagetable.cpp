@@ -29,10 +29,28 @@ void PageTable::addEntry(uint32_t pid, int page_number)
     // Combination of pid and page number act as the key to look up frame number
     std::string entry = std::to_string(pid) + "|" + std::to_string(page_number);
 
-    int frame = 0; 
+    std::vector<std::string> keys = sortedKeys();
+    int frame, i;
+    bool frames[keys.size()];
+
     // Find free frame
-    frame = (sortedKeys().size() + 1);
-    // TODO: implement this!
+    //Create collection of used frame numbers
+    std::map<std::string, int>::iterator it;
+    for (it = _table.begin(); it != _table.end(); it++)
+    {
+        frames[it->second] = true;
+    }
+
+    //frame gets the first unused frame number or a new frame that is higher than the rest
+    frame = keys.size();
+    for(i = 0; i < keys.size(); i++) 
+    {
+        if(!frames[i]){
+            frame = i;
+            break;
+        }
+    }
+
     _table[entry] = frame;
 }
 
@@ -70,4 +88,22 @@ void PageTable::print()
         // TODO: print all pages
         std::cout << keys.at(i) << "|" << _table[keys.at(i)] <<std::endl;
     }
+}
+
+int PageTable::getNextPage(uint32_t pid)
+{
+    int i = 0;
+    std::string entry = std::to_string(pid) + "|" + std::to_string(i);
+
+    while(_table.count(entry) > 0){
+        i++;
+        entry = std::to_string(pid) + "|" + std::to_string(i);
+    }
+
+    return i;
+}
+
+int PageTable::getPageSize()
+{
+    return _page_size;
 }

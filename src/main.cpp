@@ -90,7 +90,6 @@ int main(int argc, char **argv)
         }
         else if(lead_command == "print"){
             //std::cout << "Success! --> print" << std::endl;
-            page_table->print();
             std::string whatToPrint = command_list[1];
             if(whatToPrint == "mmu"){
                 mmu->print();
@@ -152,34 +151,41 @@ void printStartMessage(int page_size)
 
 void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - create new process in the MMU
-    //   - allocate new variables for the <TEXT>, <GLOBALS>, and <STACK>
-    //   - print pid
-
     //[1]: create new process in the MMU
     uint32_t PID = mmu->createProcess();
 
     //[2]: allocate new variables for <TEXT>, <GLOBALS>, and <STACK>
     //<STACK> = 65536
-    allocateVariable(PID, "<TEXT>", Char, text_size, mmu, page_table);
-    allocateVariable(PID, "<GLOBALS>", Char, data_size, mmu, page_table);
-    allocateVariable(PID, "<STACK>", Char, 65536, mmu, page_table);
+    int tot_size = text_size + data_size + 65536;
+    int page_size = page_table->getPageSize();
+    int space = 0;
+    int i = 0;
 
+    mmu->addVariableToProcess(PID, "<TEXT>", Char, text_size, 0);
+    mmu->addVariableToProcess(PID, "<GLOBALS>", Char, data_size, text_size);
+    mmu->addVariableToProcess(PID, "<STACK>", Char, 65536, text_size + data_size);
+
+    while(space < tot_size){
+        page_table->addEntry(PID, i);
+        i++;
+        space += page_size;
+    }
+
+    //initialize free space
+    if(space == tot_size){
+        mmu->newFreeSpacePage(PID, page_size, space);
+    } else {
+        mmu->newFreeSpaceGap(PID, space - tot_size, space - (space - tot_size));
+    }
     //[3]: print PID
     std::cout << PID << std::endl;
 }
 
 void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - find first free space within a page already allocated to this process that is large enough to fit the new variable
-    //   - if no hole is large enough, allocate new page(s)
-    //   - insert variable into MMU
-    //   - print virtual memory address
 
-    //[1]: find first free space within a page already allocated to this process that is large enough to fit the new variable
-    int n;
+    //size of data
+    uint32_t n;
     if(type == Char){
         n = num_elements;
     }
@@ -193,14 +199,30 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
         n = num_elements * 8;
     }
 
-    page_table->addEntry(pid, 0);
-    page_table->addEntry(pid, 1);
+    //next unallocated page
+    int page = page_table->getNextPage(pid);
+    int page_size = page_table->getPageSize();
 
+    //[1]: find first free space within a page already allocated to this process that is large enough to fit the new variable
+
+    //Location of the first free space big enough for data 'n' (-1 if no free space)
+    uint32_t address = mmu->getFreeSpace(pid, n, page_size * page);
+    
     //[2]: if no hole is large enough, allocate new page(s)
+    if(address == -1)
+    {
+        page_table->addEntry(pid, page);
+        address = page_size * page;
+        mmu->newFreeSpacePage(pid, page_size, address);
+    }
 
     //[3]: insert variable into MMU
+    mmu->addVariableToProcess(pid,var_name,type,n,address); 
+    //modify free space
+    mmu->modifyFreeSpace(pid, n, address);
 
     //[4]: print virtual memory address
+    std::cout << address << std::endl;
 }
 
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, void *memory)
