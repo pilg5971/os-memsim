@@ -82,7 +82,9 @@ int main(int argc, char **argv)
         }   
         else if(lead_command == "free"){
             //std::cout << "Success! --> free" << std::endl;
-
+            int pid = stoi(command_list[1]);
+            std::string varName = command_list[2];
+            freeVariable(pid, varName, mmu, page_table);
         }
         else if(lead_command == "terminate"){
             //std::cout << "Success! --> terminate" << std::endl;
@@ -97,15 +99,10 @@ int main(int argc, char **argv)
             else if(whatToPrint == "page"){
                 page_table->print();
             }
-            /*
             else if(whatToPrint == "processes"){
-                std::vector<std::string> pids = page_table->sortedKeys();
-                int k;
-                for(k = 0; k < pids.size(); k++){
-                    std::cout << pids.at(k).substr(0, "|") << std::endl;
-                }
+                page_table->printProcesses();
             }
-            */
+            
             //Variable printing
             /*TBD
             else{
@@ -199,6 +196,12 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
         n = num_elements * 8;
     }
 
+    //error check if allocation will exceed system memory
+    if(!mmu->modifyTotalSpace(pid, n))
+    {
+        return;
+    }
+
     //next unallocated page
     int page = page_table->getNextPage(pid);
     int page_size = page_table->getPageSize();
@@ -236,9 +239,27 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *valu
 
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - remove entry from MMU
-    //   - free page if this variable was the only one on a given page
+    //get size and address
+    uint32_t address = mmu->getAddress(pid, var_name);
+    uint32_t size = mmu->getSize(pid, var_name);
+    uint32_t page_size = page_table->getPageSize();
+
+    //[1]: remove entry from MMU
+    mmu->removeVariableFromProcess(pid, address);
+
+    //edit freespace
+    mmu->restoreFreeSpace(pid, address, size, page_size);
+
+    //[2]: free page if this variable was the only one on a given page
+
+    //returns the frame if it only contains var_name, otherwise returns -1
+    int frame = mmu->emptyPage(pid, page_size);
+
+    if(frame != -1)
+    {
+        page_table->removeEntry(pid, frame);
+    }
+
 }
 
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table)

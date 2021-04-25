@@ -57,18 +57,21 @@ void PageTable::addEntry(uint32_t pid, int page_number)
 int PageTable::getPhysicalAddress(uint32_t pid, uint32_t virtual_address)
 {
     // Convert virtual address to page_number and page_offset
+
     // TODO: implement this!
-    int page_number = 0;
-    int page_offset = 0;
+    int page_number = virtual_address / _page_size;
+    int page_offset = virtual_address % _page_size;
 
     // Combination of pid and page number act as the key to look up frame number
     std::string entry = std::to_string(pid) + "|" + std::to_string(page_number);
-    
+
     // If entry exists, look up frame number and convert virtual to physical address
     int address = -1;
+    int frame;
     if (_table.count(entry) > 0)
     {
-        // TODO: implement this!
+        frame = _table.at(entry);
+        address = frame * _page_size + page_offset;
     }
 
     return address;
@@ -82,11 +85,15 @@ void PageTable::print()
     std::cout << "------+-------------+--------------" << std::endl;
 
     std::vector<std::string> keys = sortedKeys();
+    std::string separator = "|";
 
     for (i = 0; i < keys.size(); i++)
     {
-        // TODO: print all pages
-        std::cout << keys.at(i) << "|" << _table[keys.at(i)] <<std::endl;
+        size_t sepPosition = keys[i].find(separator);
+        int PID = stoi(keys[i].substr(0, sepPosition));
+        int pageNum = stoi(keys[i].substr(sepPosition + 1));
+        //std::cout << " " << PID << " |\t\t  " << pageNum << " |\t\t " << _table[keys[i]] << std::endl;
+        printf(" %4d | %11d | %12d \n", PID, pageNum, _table[keys[i]]);
     }
 }
 
@@ -101,6 +108,53 @@ int PageTable::getNextPage(uint32_t pid)
     }
 
     return i;
+}
+
+void PageTable::printProcesses()
+{
+    int PID = 1023;
+
+    std::map<std::string, int>::iterator it;
+    for (it = _table.begin(); it != _table.end(); it++)
+    {
+        size_t separator = it->first.find("|");
+        uint32_t pid = std::stoi(it->first.substr(0, separator)); 
+
+        //when a new pid is found
+        if(pid != PID)
+        {
+            //update pid
+            PID = pid;
+            //print pid
+            std::cout << pid << std::endl;
+        }
+    }
+}
+
+void PageTable::removeEntry(uint32_t pid, uint32_t frame)
+{
+    std::cout << "here 1" << std::endl;
+    std::vector<std::string> keys = sortedKeys();
+    std::map<std::string, int>::iterator it;
+
+    int i = 0;
+    std::string entry = std::to_string(pid) + "|" + std::to_string(i);
+
+    //while entry exists
+    while(_table.count(entry) > 0){
+
+        std::cout << "here 2" << std::endl;
+
+        if(_table[entry] == frame)
+        {
+            std::cout << "here 3" << std::endl;
+            _table.erase(entry);
+            return;
+        }
+
+        i++;
+        entry = std::to_string(pid) + "|" + std::to_string(i);
+    }
 }
 
 int PageTable::getPageSize()

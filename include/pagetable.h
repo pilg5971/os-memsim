@@ -39,5 +39,8 @@ public:
 
     int getNextPage(uint32_t pid);
     int getPageSize();
+    void printProcesses();
+
+    void removeEntry(uint32_t pid, uint32_t frame);
 };
 #endif // __PAGETABLE_H_
