@@ -131,30 +131,12 @@ void PageTable::printProcesses()
     }
 }
 
-void PageTable::removeEntry(uint32_t pid, uint32_t frame)
+void PageTable::removeEntry(uint32_t pid, uint32_t page)
 {
-    std::cout << "here 1" << std::endl;
-    std::vector<std::string> keys = sortedKeys();
-    std::map<std::string, int>::iterator it;
-
-    int i = 0;
-    std::string entry = std::to_string(pid) + "|" + std::to_string(i);
+    std::string entry = std::to_string(pid) + "|" + std::to_string(page);
 
     //while entry exists
-    while(_table.count(entry) > 0){
-
-        std::cout << "here 2" << std::endl;
-
-        if(_table[entry] == frame)
-        {
-            std::cout << "here 3" << std::endl;
-            _table.erase(entry);
-            return;
-        }
-
-        i++;
-        entry = std::to_string(pid) + "|" + std::to_string(i);
-    }
+    _table.erase(entry);
 }
 
 int PageTable::getPageSize()

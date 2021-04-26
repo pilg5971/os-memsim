@@ -10,6 +10,7 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, void *memory);
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table);
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table);
+uint32_t adjustAddressForBoundry(uint32_t address, uint32_t n, uint32_t num_elements, uint32_t page_size);
 
 //Command Conversion Methods
 void splitString(std::string text, char d, std::vector<std::string>& result);
@@ -61,15 +62,13 @@ int main(int argc, char **argv)
 
         //Valid Command Check
         if(lead_command == "create"){
-            //std::cout << "Success! --> create" << std::endl;
 
-            //create process
             int textSize = stoi(command_list[1]);
             int dataSize = stoi(command_list[2]); 
             createProcess(textSize, dataSize, mmu, page_table);
         }
         else if(lead_command == "allocate"){
-            //std::cout << "Success! --> allocate" << std::endl;
+
             int pid = stoi(command_list[1]);
             std::string varName = command_list[2];
             DataType dataType = stringToDataType(command_list[3]);
@@ -81,14 +80,15 @@ int main(int argc, char **argv)
 
         }   
         else if(lead_command == "free"){
-            //std::cout << "Success! --> free" << std::endl;
+
             int pid = stoi(command_list[1]);
             std::string varName = command_list[2];
             freeVariable(pid, varName, mmu, page_table);
         }
         else if(lead_command == "terminate"){
-            //std::cout << "Success! --> terminate" << std::endl;
 
+            int pid = stoi(command_list[1]);
+            terminateProcess(pid, mmu, page_table);
         }
         else if(lead_command == "print"){
             //std::cout << "Success! --> print" << std::endl;
@@ -169,11 +169,8 @@ void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table
     }
 
     //initialize free space
-    if(space == tot_size){
-        mmu->newFreeSpacePage(PID, page_size, space);
-    } else {
-        mmu->newFreeSpaceGap(PID, space - tot_size, space - (space - tot_size));
-    }
+    mmu->modifyFreeSpace(PID, tot_size, 0, 0);
+
     //[3]: print PID
     std::cout << PID << std::endl;
 }
@@ -181,51 +178,74 @@ void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table
 void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table)
 {
 
-    //size of data
+    //Bytes per element of data
     uint32_t n;
     if(type == Char){
-        n = num_elements;
+        n = 1;
     }
     else if(type == Short){
-        n = num_elements * 2;
+        n =  2;
     }
     else if(type == Int || type == Float){
-        n = num_elements * 4;
+        n =  4;
     }
     else if(type == Long || type == Double){
-        n = num_elements * 8;
+        n = 8;
     }
 
-    //error check if allocation will exceed system memory
-    if(!mmu->modifyTotalSpace(pid, n))
+    //next unallocated page (also number of allocated pages)
+    int page = page_table->getNextPage(pid);
+    int page_size = page_table->getPageSize();
+    int allocatedSpace = page*page_size;
+
+    //[1]: find first free space within a page already allocated to this process that is large enough to fit the new variable
+
+    //Address of the first free space big enough for data size
+    uint32_t address = mmu->getFreeSpace(pid, n* num_elements, page_size * page);
+
+    if(address == -1)
     {
         return;
     }
 
-    //next unallocated page
-    int page = page_table->getNextPage(pid);
-    int page_size = page_table->getPageSize();
+    //regardless of allocated pages, check if an individual element crosses page boundries
+    int offset = adjustAddressForBoundry(address, n, num_elements, page_size);
 
-    //[1]: find first free space within a page already allocated to this process that is large enough to fit the new variable
 
-    //Location of the first free space big enough for data 'n' (-1 if no free space)
-    uint32_t address = mmu->getFreeSpace(pid, n, page_size * page);
-    
+    while(address + offset + (n*num_elements) > allocatedSpace)
     //[2]: if no hole is large enough, allocate new page(s)
-    if(address == -1)
     {
+        //add new page
         page_table->addEntry(pid, page);
-        address = page_size * page;
-        mmu->newFreeSpacePage(pid, page_size, address);
+        allocatedSpace += page_size;
+        page += 1;
     }
 
     //[3]: insert variable into MMU
-    mmu->addVariableToProcess(pid,var_name,type,n,address); 
-    //modify free space
-    mmu->modifyFreeSpace(pid, n, address);
+    mmu->modifyFreeSpace(pid, n*num_elements, address, offset);
+    mmu->addVariableToProcess(pid, var_name,type, n * num_elements, address + offset); 
 
     //[4]: print virtual memory address
-    std::cout << address << std::endl;
+    std::cout << address + offset << std::endl;
+}
+
+uint32_t adjustAddressForBoundry(uint32_t address, uint32_t n, uint32_t num_elements, uint32_t page_size)
+{
+    for(int i = 0; i < num_elements; i++)
+    {
+        int element_address = (i*n) + address;
+        for(int j = 1; j < n; j++)
+        {
+            int check = element_address + j;
+            if(check%page_size == 0)
+            {
+                //page boundry exists inside of element, address will need to be offset by j bytes
+                return j;
+            }
+        }
+    }
+
+    return 0;
 }
 
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, void *memory)
@@ -242,31 +262,51 @@ void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_
     //get size and address
     uint32_t address = mmu->getAddress(pid, var_name);
     uint32_t size = mmu->getSize(pid, var_name);
+    uint32_t pages = page_table->getNextPage(pid);
     uint32_t page_size = page_table->getPageSize();
 
     //[1]: remove entry from MMU
     mmu->removeVariableFromProcess(pid, address);
 
     //edit freespace
-    mmu->restoreFreeSpace(pid, address, size, page_size);
+    mmu->restoreFreeSpace(pid, address, size);
 
     //[2]: free page if this variable was the only one on a given page
 
-    //returns the frame if it only contains var_name, otherwise returns -1
-    int frame = mmu->emptyPage(pid, page_size);
-
-    if(frame != -1)
+    int index = 0;
+    int page = 0;
+    while (index < address)
     {
-        page_table->removeEntry(pid, frame);
+        index += page_size;
+        page++;
+    }
+    
+    for(page = page; page < pages; page++)
+    {
+        if(mmu->isEmptyPage(pid, index, index + page_size))
+        {
+            page_table->removeEntry(pid, page);
+        }
+
+        index += page_size;
     }
 
 }
 
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - remove process from MMU
-    //   - free all pages associated with given process
+
+    //[1]: remove process from MMU
+    mmu->removeProcess(pid);
+
+    //[2]: free all pages associated with given process
+
+    uint32_t pages = page_table->getNextPage(pid);
+    
+    for(int i = 0; i < pages; i++)
+    {
+        page_table->removeEntry(pid, i);
+    }
 }
 
 //--------------------------------------------------STRING METHODS--------------------------------------------------//
