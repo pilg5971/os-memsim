@@ -73,22 +73,57 @@ int main(int argc, char **argv)
             std::string varName = command_list[2];
             DataType dataType = stringToDataType(command_list[3]);
             int numEl = stoi(command_list[4]);
-            allocateVariable(pid, varName, dataType, numEl, mmu, page_table);
+            if(mmu->validProcess(pid) == false){
+                std::cout << "error: process not found" << std::endl;
+            }
+            else if(mmu->validVar(pid, varName) == true){
+                std::cout << "error: variable already exists" << std::endl;
+            }
+            else{
+                allocateVariable(pid, varName, dataType, numEl, mmu, page_table);
+            }
+
         }
         else if(lead_command == "set"){
-            //std::cout << "Success! --> set" << std::endl;
-
+            //(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, void *memory)
+            int pid = stoi(command_list[1]);
+            std::string varName = command_list[2];
+            //uint32_t offset = stoi(command_list[2]);
+            if(mmu->validProcess(pid) == false){
+                std::cout << "error: process not found" << std::endl;
+            }
+            else if(mmu->validVar(pid, varName) == false){
+                std::cout << "error: variable not found" << std::endl;
+            }
+            else{
+                std::cout << "Performing SET command" << std::endl;
+            }
+            
         }   
         else if(lead_command == "free"){
 
             int pid = stoi(command_list[1]);
             std::string varName = command_list[2];
-            freeVariable(pid, varName, mmu, page_table);
+            if(mmu->validProcess(pid) == false){
+                std::cout << "error: process not found" << std::endl;
+            }
+            else if(mmu->validVar(pid, varName) == false){
+                std::cout << "error: variable not found" << std::endl;
+            }
+            else{
+                freeVariable(pid, varName, mmu, page_table);
+            }
+
         }
         else if(lead_command == "terminate"){
-
+        
             int pid = stoi(command_list[1]);
-            terminateProcess(pid, mmu, page_table);
+            if(mmu->validProcess(pid)){
+                terminateProcess(pid, mmu, page_table);
+            }
+            else{
+                std::cout << "error: process not found" << std::endl;
+            }
         }
         else if(lead_command == "print"){
             //std::cout << "Success! --> print" << std::endl;
@@ -101,6 +136,10 @@ int main(int argc, char **argv)
             }
             else if(whatToPrint == "processes"){
                 page_table->printProcesses();
+            }
+            //<PID>:<var_name>
+            else{
+
             }
             
             //Variable printing
@@ -255,6 +294,10 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *valu
     //   - insert `value` into `memory` at physical address
     //   * note: this function only handles a single element (i.e. you'll need to call this within a loop when setting
     //           multiple elements of an array)
+
+    //[1]: Look up physical address
+    int physAddr = page_table->getPhysicalAddress(pid, mmu->getAddress(pid, var_name) + offset);
+
 }
 
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table)

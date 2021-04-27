@@ -45,6 +45,10 @@ public:
     uint32_t getFreeSpace(uint32_t pid, uint32_t size, u_int32_t allocatedSpace);
     void modifyFreeSpace(u_int32_t pid, uint32_t size, uint32_t address, uint32_t offset);
     void restoreFreeSpace(uint32_t pid, uint32_t address, uint32_t size);
+
+    bool validProcess(uint32_t pid);
+    bool validVar(uint32_t pid, std::string var_name);
+    
 };
 
 #endif // __MMU_H_

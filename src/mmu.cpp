@@ -301,3 +301,38 @@ uint32_t Mmu::getSize(uint32_t pid, std::string var_name)
     }
     return -1;
 }
+
+bool Mmu::validProcess(uint32_t pid)
+{
+    int i;
+    bool solution = false;
+    for(i = 0; i < _processes.size(); i++)
+    {
+        if(_processes[i]->pid == pid)
+        {
+            solution = true;
+        }
+    }
+    return solution;
+}
+
+bool Mmu::validVar(uint32_t pid, std::string var_name)
+{
+    int i,j;
+    bool solution = false;
+    for (i = 0; i < _processes.size(); i++)
+    {
+        //correct process
+        if(_processes[i]->pid == pid)
+        {
+            for (j = 0; j < _processes[i]->variables.size(); j++)
+            {
+                if(_processes[i]->variables[j]->name == var_name)
+                {
+                    solution = true;
+                }
+            }
+        }
+    }
+    return solution;
+}
