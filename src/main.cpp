@@ -86,9 +86,10 @@ int main(int argc, char **argv)
         }
         else if(lead_command == "set"){
             //(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, void *memory)
+            int i;
             int pid = stoi(command_list[1]);
             std::string varName = command_list[2];
-            //uint32_t offset = stoi(command_list[2]);
+            uint32_t offset = stoul(command_list[3]);
             if(mmu->validProcess(pid) == false){
                 std::cout << "error: process not found" << std::endl;
             }
@@ -96,7 +97,36 @@ int main(int argc, char **argv)
                 std::cout << "error: variable not found" << std::endl;
             }
             else{
-                std::cout << "Performing SET command" << std::endl;
+                //std::cout << "Performing SET command" << std::endl;
+                DataType valueType = mmu->returnDatatype(pid, varName);
+
+                for(i = 4; i < command_list.size(); i++){
+                    if(valueType == Int){
+                        int value = stoi(command_list[i]);
+                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                    }
+                    else if(valueType == Char){
+                        char value = command[i];
+                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                    }
+                    else if(valueType == Short){
+                        short value = (short)stoi(command_list[i]);
+                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                    }
+                    else if(valueType == Float){
+                        float value = stof(command_list[i]);
+                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                    }
+                    else if(valueType == Long){
+                        long value = stol(command_list[i]);
+                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                    }
+                    else if(valueType == Double){
+                        double value = stod(command_list[i]);
+                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                    }
+                    offset++;
+                }
             }
             
         }   
@@ -126,7 +156,7 @@ int main(int argc, char **argv)
             }
         }
         else if(lead_command == "print"){
-            //std::cout << "Success! --> print" << std::endl;
+
             std::string whatToPrint = command_list[1];
             if(whatToPrint == "mmu"){
                 mmu->print();
@@ -137,19 +167,20 @@ int main(int argc, char **argv)
             else if(whatToPrint == "processes"){
                 page_table->printProcesses();
             }
+
             //<PID>:<var_name>
             else{
+                std::string separator = ":";
+                size_t sepPosition = command_list[1].find(separator);
+                int PID = stoi(command_list[1].substr(0, sepPosition));
+                std::string varName = (command_list[1].substr(sepPosition + 1));
 
-            }
-            
-            //Variable printing
-            /*TBD
-            else{
-
-            }
-            */
+                std::cout << "PID: " << PID << " varName: " << varName << std::endl;
+                int physicalAddress = page_table->getPhysicalAddress(PID, mmu->getVirtualAddress(PID, varName));
+                char *memoryLocation = ((char*)memory) + physicalAddress;
+                std::cout << memoryLocation[physicalAddress] << std::endl;
+           }
         }
-
         //Invalid Command
         else{
             std::cout << "error: command not recognized" << std::endl;
@@ -297,6 +328,23 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *valu
 
     //[1]: Look up physical address
     int physAddr = page_table->getPhysicalAddress(pid, mmu->getAddress(pid, var_name) + offset);
+
+    //[2]: Insert 'value' into 'memory' at physical address
+    DataType valueDataType = mmu->returnDatatype(pid, var_name);
+    if(valueDataType == Char){
+        memcpy((char*)memory + physAddr, &value, 1);
+        //n = 1;
+    }
+    else if(valueDataType == Short){
+        //n =  2;
+    }
+    else if(valueDataType == Int || valueDataType == Float){
+        //n =  4;
+        memcpy((char*)memory + physAddr, &value, 4);
+    }
+    else if(valueDataType == Long || valueDataType == Double){
+        //n = 8;
+    }
 
 }
 
@@ -471,7 +519,7 @@ DataType stringToDataType(std::string text){
         solution = Double;
     }
     else{
-        std::cout << "error: allocate command parameter not recognized" << std::endl;
+        std::cout << "error: datatype parameter not recognized" << std::endl;
     }
     return solution;
 }
