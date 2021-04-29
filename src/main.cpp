@@ -176,9 +176,44 @@ int main(int argc, char **argv)
                 std::string varName = (command_list[1].substr(sepPosition + 1));
 
                 std::cout << "PID: " << PID << " varName: " << varName << std::endl;
-                int physicalAddress = page_table->getPhysicalAddress(PID, mmu->getVirtualAddress(PID, varName));
-                char *memoryLocation = ((char*)memory) + physicalAddress;
-                std::cout << memoryLocation[physicalAddress] << std::endl;
+
+                std::vector<Process*> processes = mmu->getProcesses();
+                DataType varDataType = mmu->returnDatatype(PID, varName);
+                int i,j,k,physicalLoc,size;
+
+                for(i = 0; i < processes.size(); i++){
+                    if(processes[i]->pid == PID){
+                        for(j = 0; j < processes[i]->variables.size(); j++){
+                            if(processes[i]->variables[j]->name == varName){
+                                size = processes[i]->variables.size();
+                                physicalLoc = page_table->getPhysicalAddress(PID, mmu->getAddress(PID, varName));
+                                for(k = 0; k < 4; k++){
+                                    if(varDataType == Char){
+                                        //n = 1
+                                        std::cout << ((char*)memory)[physicalLoc] << ", ";
+                                    }
+                                    else if(varDataType == Short){
+                                        //n =  2;
+                                        std::cout << ((short*)memory)[physicalLoc] << ", ";
+                                    }
+                                    else if(varDataType == Int || varDataType == Float){
+                                        //n =  4;
+                                        std::cout << ((int*)memory)[physicalLoc] << ", ";
+                                    }
+                                    else if(varDataType == Long || varDataType == Double){
+                                        //n = 8;
+                                        std::cout << ((long*)memory)[physicalLoc] << ", ";
+                                    }
+                                }
+                                if(size > 4){
+                                    std::cout << "... [" << size << " items]";
+                                }
+                                std::cout << std::endl;
+                            }
+                        }
+                    }
+                }
+
            }
         }
         //Invalid Command

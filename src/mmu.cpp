@@ -358,23 +358,7 @@ DataType Mmu::returnDatatype(uint32_t pid, std::string var_name)
     return solution;
 } 
 
-int Mmu::getVirtualAddress(uint32_t pid, std::string var_name)
+std::vector<Process*> Mmu::getProcesses()
 {
-    int i,j;
-    uint32_t solution = -1;
-    for (i = 0; i < _processes.size(); i++)
-    {
-        //correct process
-        if(_processes[i]->pid == pid)
-        {
-            for (j = 0; j < _processes[i]->variables.size(); j++)
-            {
-                if(_processes[i]->variables[j]->name == var_name)
-                {
-                    solution = _processes[i]->variables[j]->virtual_address;
-                }
-            }
-        }
-    }
-    return solution;
+    return _processes;
 }

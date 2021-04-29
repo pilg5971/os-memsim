@@ -67,11 +67,9 @@ int PageTable::getPhysicalAddress(uint32_t pid, uint32_t virtual_address)
 
     // If entry exists, look up frame number and convert virtual to physical address
     int address = -1;
-    int frame;
     if (_table.count(entry) > 0)
     {
-        frame = _table.at(entry);
-        address = frame * _page_size + page_offset;
+        address = _table.at(entry) * _page_size + page_offset;
     }
 
     return address;

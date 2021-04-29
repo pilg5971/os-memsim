@@ -50,7 +50,8 @@ public:
     bool validVar(uint32_t pid, std::string var_name);
     DataType returnDatatype(uint32_t pid, std::string var_name);
 
-    int getVirtualAddress(uint32_t pid, std::string var_name);
+    std::vector<Process*> getProcesses();
+
 };
 
 #endif // __MMU_H_
