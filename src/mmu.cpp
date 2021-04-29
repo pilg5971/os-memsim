@@ -88,10 +88,9 @@ void Mmu::print()
             virAddr = _processes[i]->variables[j]->virtual_address;
             varSize = _processes[i]->variables[j]->size;
 
-            //if(_processes[i]->variables[j]->type != DataType::FreeSpace)
+            if(_processes[i]->variables[j]->type != DataType::FreeSpace)
             {
-                //printf(" %4d | %-13s |  0x%08X  | %10u \n", PID, varName.c_str(), virAddr, varSize);
-                printf(" %4d | %-13s |  %u  | %10u \n", PID, varName.c_str(), virAddr, varSize);
+                printf(" %4d | %-13s |  0x%08X  | %10u \n", PID, varName.c_str(), virAddr, varSize);
             }
         }
     }

@@ -103,27 +103,27 @@ int main(int argc, char **argv)
                 for(i = 4; i < command_list.size(); i++){
                     if(valueType == Int){
                         int value = stoi(command_list[i]);
-                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                        setVariable(pid, varName, (offset*4), &value, mmu, page_table, memory);
                     }
                     else if(valueType == Char){
-                        char value = command[i];
+                        char value = command_list[i][0];
                         setVariable(pid, varName, offset, &value, mmu, page_table, memory);
                     }
                     else if(valueType == Short){
                         short value = (short)stoi(command_list[i]);
-                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                        setVariable(pid, varName, (offset*2), &value, mmu, page_table, memory);
                     }
                     else if(valueType == Float){
                         float value = stof(command_list[i]);
-                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                        setVariable(pid, varName, (offset*4), &value, mmu, page_table, memory);
                     }
                     else if(valueType == Long){
                         long value = stol(command_list[i]);
-                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                        setVariable(pid, varName, (offset*8), &value, mmu, page_table, memory);
                     }
                     else if(valueType == Double){
                         double value = stod(command_list[i]);
-                        setVariable(pid, varName, offset, &value, mmu, page_table, memory);
+                        setVariable(pid, varName, (offset*8), &value, mmu, page_table, memory);
                     }
                     offset++;
                 }
@@ -179,30 +179,99 @@ int main(int argc, char **argv)
 
                 std::vector<Process*> processes = mmu->getProcesses();
                 DataType varDataType = mmu->returnDatatype(PID, varName);
-                int i,j,k,physicalLoc,size;
+                int i,j,k,physicalLoc;
+                uint32_t size,offsetNum;
+                physicalLoc = page_table->getPhysicalAddress(PID, mmu->getAddress(PID, varName));
 
+                offsetNum = 0;
                 for(i = 0; i < processes.size(); i++){
                     if(processes[i]->pid == PID){
                         for(j = 0; j < processes[i]->variables.size(); j++){
                             if(processes[i]->variables[j]->name == varName){
-                                size = processes[i]->variables.size();
-                                physicalLoc = page_table->getPhysicalAddress(PID, mmu->getAddress(PID, varName));
                                 for(k = 0; k < 4; k++){
                                     if(varDataType == Char){
                                         //n = 1
-                                        std::cout << ((char*)memory)[physicalLoc] << ", ";
+                                        size = processes[i]->variables[j]->size;
+                                        if(k == size - 1  && size <= 4){
+                                            char *memLoc = (char*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc;
+                                            break;
+                                        }
+                                        else{
+                                            char *memLoc = (char*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc << ", ";
+                                        }
+                                        offsetNum += 1;
                                     }
                                     else if(varDataType == Short){
                                         //n =  2;
-                                        std::cout << ((short*)memory)[physicalLoc] << ", ";
+                                        size = processes[i]->variables[j]->size/2;
+                                        if(k == size - 1  && size <= 4){
+                                            short *memLoc = (short*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc;
+                                            break;
+                                        }
+                                        else{
+                                            short *memLoc = (short*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc << ", ";
+                                        }
+                                        offsetNum += 2;
                                     }
-                                    else if(varDataType == Int || varDataType == Float){
+                                    else if(varDataType == Float){
                                         //n =  4;
-                                        std::cout << ((int*)memory)[physicalLoc] << ", ";
+                                        size = processes[i]->variables[j]->size/4;
+                                        if(k == size - 1  && size <= 4){
+                                            float *memLoc = (float*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc;
+                                            break;
+                                        }
+                                        else{
+                                            float *memLoc = (float*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc << ", ";
+                                        }
+                                        offsetNum += 4;
                                     }
-                                    else if(varDataType == Long || varDataType == Double){
+                                    else if(varDataType == Int){
+                                        //n =  4;
+                                        size = processes[i]->variables[j]->size/4;
+                                        if(k == size - 1  && size <= 4){
+                                            int *memLoc = (int*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc;
+                                            break;
+                                        }
+                                        else{
+                                            int *memLoc = (int*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc << ", ";
+                                        }
+                                        offsetNum += 4;
+                                    }
+                                    else if(varDataType == Long){
                                         //n = 8;
-                                        std::cout << ((long*)memory)[physicalLoc] << ", ";
+                                        size = processes[i]->variables[j]->size/8;
+                                        if(k == size - 1  && size <= 4){
+                                            long *memLoc = (long*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc;
+                                            break;
+                                        }
+                                        else{
+                                            long *memLoc = (long*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc << ", ";
+                                        }
+                                        offsetNum += 8;
+                                    }
+                                    else if(varDataType == Double){
+                                        //n =  8;
+                                        size = processes[i]->variables[j]->size/8;
+                                        if(k == size - 1  && size <= 4){
+                                            double *memLoc = (double*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc;
+                                            break;
+                                        }
+                                        else{
+                                            double *memLoc = (double*)(memory) + physicalLoc + offsetNum;
+                                            std::cout << *memLoc << ", ";
+                                        }
+                                        offsetNum += 8;
                                     }
                                 }
                                 if(size > 4){
@@ -362,23 +431,47 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *valu
     //           multiple elements of an array)
 
     //[1]: Look up physical address
-    int physAddr = page_table->getPhysicalAddress(pid, mmu->getAddress(pid, var_name) + offset);
+    int physAddr = page_table->getPhysicalAddress(pid, mmu->getAddress(pid, var_name));
 
     //[2]: Insert 'value' into 'memory' at physical address
     DataType valueDataType = mmu->returnDatatype(pid, var_name);
+    int location = physAddr + offset;
     if(valueDataType == Char){
-        memcpy((char*)memory + physAddr, &value, 1);
         //n = 1;
+        memcpy((char*)memory + location, value, 1);
+        char *memLoc = (char*)(memory) + physAddr + offset;
+        //std::cout << *memLoc;
     }
     else if(valueDataType == Short){
         //n =  2;
+        memcpy((short*)memory + location, value, 2);
+        short *memLoc = (short*)(memory) + physAddr + offset;
+        //std::cout << *memLoc;
     }
     else if(valueDataType == Int || valueDataType == Float){
         //n =  4;
-        memcpy((char*)memory + physAddr, &value, 4);
+        if(valueDataType == Int){
+            memcpy((int*)memory + location, value, 4);
+            int *memLoc = (int*)(memory) + physAddr + offset;
+        }
+        else{
+            memcpy((float*)memory + location, value, 4);
+            float *memLoc = (float*)(memory) + physAddr + offset;
+            //std::cout << *memLoc;
+        }
     }
     else if(valueDataType == Long || valueDataType == Double){
         //n = 8;
+        if(valueDataType == Long){
+            memcpy((long*)memory + location, value, 8);
+            long *memLoc = (long*)(memory) + physAddr + offset;
+            //std::cout << *memLoc;
+        }
+        else{
+            memcpy((double*)memory + location, value, 8);
+            double *memLoc = (double*)(memory) + physAddr + offset;
+            //std::cout << *memLoc;
+        }
     }
 
 }
